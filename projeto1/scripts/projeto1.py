@@ -20,9 +20,10 @@ from sensor_msgs.msg import CompressedImage, Image
 from cv_bridge import CvBridge, CvBridgeError
 import cormodule
 from math import pi
-from std_msgs.msg import UInt8
+from std_msgs.msg import UInt8, Float32
 import visao_module
 from sensor_msgs.msg import LaserScan
+
 
 
 
@@ -34,7 +35,7 @@ cv_image = None
 viu_dog = False
 ccaixa = []
 cimagem = []
-atraso = 1.5E9 # 1 segundo e meio. Em nanossegundos
+atraso = 0.1E9 # 1 segundo e meio. Em nanossegundos
 tolerancia = 50
 leituras = None
 range_min = None
@@ -89,7 +90,7 @@ def desvia(nbumper, pub):
         pub.publish(t3)
     if nbumper == 4:
         pub.publish(t4)
-        som.publish(2)
+        #som.publish(2)
 
 
 
@@ -123,7 +124,7 @@ def reagir(pub):
         pub.publish(t3)
     if nbumper == 4:
         pub.publish(t4)
-        som.publish(2)
+        #som.publish(2)
         
     rospy.sleep(1)
 
@@ -139,12 +140,18 @@ def documenta_visual(resultados):
             if r[0] == "cat":
                 viu_dog = True
 
-def reagir_visual(pub, som):
+def reagir_visual(pub, cam):
     global viu_dog
     vel = Twist(Vector3(0,0,0), Vector3(0,0, 0))
+    cam.publish(7)    
+    rospy.sleep(0.1)
+    cam.publish(4)    
+    rospy.sleep(0.1)   
+    cam.publish(5)    
     viu_dog = False
-    som.publish(3)
-    rospy.sleep(2)
+
+
+
 
 # A função a seguir é chamada sempre que chega um novo frame
 def roda_todo_frame(imagem):
@@ -196,15 +203,15 @@ if __name__=="__main__":
     rospy.init_node("cor")
     rospy.Subscriber("/bumper", UInt8, bateu)
     topico_imagem = "/kamera"
-    scaneou
-    # Para renomear a *webcamscaneou
-    #   Primeiro instale o suporte https://github.com/Insper/robot1scaneou9/blob/master/guides/debugar_sem_robo_opencv_melodic.md
-    #scaneou
-    #   Depois faça:scaneou
-    #   scaneou
-    #   rosrun cv_camera cv_camera_nodescaneou
-    #scaneou
-    #   rosrun topic_tools relay  /cv_camera/image_raw/compressed /scaneoukamera
+ 
+    # Para renomear a *webcam
+    #   Primeiro instale o suporte https://github.com/Insper/robot19/blob/master/guides/debugar_sem_robo_opencv_melodic.md
+    #
+    #   Depois faça:
+    #   
+    #   rosrun cv_camera cv_camera_node
+    #
+    #   rosrun topic_tools relay  /cv_camera/image_raw/compressed /kamera
     #
     # 
     # Para renomear a câmera simulada do Gazebo
@@ -219,10 +226,12 @@ if __name__=="__main__":
     #  rostopic pub /sound turtlebot3_msgs/Sound  1
 
     recebedor = rospy.Subscriber(topico_imagem, CompressedImage, roda_todo_frame, queue_size=4, buff_size = 2**24)
+    posicao_camera = rospy.Publisher("/servo_camera/position", Float32, queue_size = 1 )
+
     print("Usando ", topico_imagem)
     global som
     output = rospy.Publisher("/cmd_vel", Twist, queue_size = 1)
-    som = rospy.Publisher("/sound", Sound, queue_size=1)#latch=True)
+    som = rospy.Publisher("/sound", Sound, queue_size=None)#latch=True)
     recebe_scan = rospy.Subscriber("/scan", LaserScan, scaneou)
 
 
@@ -240,9 +249,6 @@ if __name__=="__main__":
         elif c_caixa[0] < xmin:
             pub.publish(vel_esquerda)
 
-
-
-
     try:
         while not rospy.is_shutdown():
             if len(ccaixa) != 0:
@@ -252,7 +258,7 @@ if __name__=="__main__":
             if leituras is not None:
                 avoid(leituras, output)
             if viu_dog:
-                reagir_visual(output, som)
+                reagir_visual(output, posicao_camera)
             rospy.sleep(0.1)
 
     except rospy.ROSInterruptException:
